@@ -3,7 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class Comment {
   String username;
   String comment;
-  final datePublished;
+  // Use Timestamp for datePublished if you're storing Firestore Timestamp
+  final Timestamp datePublished;
   List likes;
   String profilePhoto;
   String uid;
@@ -20,22 +21,22 @@ class Comment {
   });
 
   Map<String, dynamic> toJson() => {
-        'username': username,
-        'comment': comment,
-        'datePublished': datePublished,
-        'likes': likes,
-        'profilePhoto': profilePhoto,
-        'uid': uid,
-        'id': id,
-      };
+    'username': username,
+    'comment': comment,
+    'datePublished': datePublished,
+    'likes': likes,
+    'profilePhoto': profilePhoto,
+    'uid': uid,
+    'id': id,
+  };
 
   static Comment fromSnap(DocumentSnapshot snap) {
     var snapshot = snap.data() as Map<String, dynamic>;
     return Comment(
       username: snapshot['username'],
       comment: snapshot['comment'],
-      datePublished: snapshot['datePublished'],
-      likes: snapshot['likes'],
+      datePublished: snapshot['datePublished'], // Firestore Timestamp
+      likes: List.from(snapshot['likes']),
       profilePhoto: snapshot['profilePhoto'],
       uid: snapshot['uid'],
       id: snapshot['id'],

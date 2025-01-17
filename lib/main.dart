@@ -7,9 +7,9 @@ import 'package:tiktok_tutorial/views/screens/auth/login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp().then((value) {
-    Get.put(AuthController());
-  });
+  await Firebase.initializeApp();
+  // Initialize and store the AuthController with GetX
+  Get.put(AuthController());
   runApp(const MyApp());
 }
 
@@ -24,7 +24,19 @@ class MyApp extends StatelessWidget {
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: backgroundColor,
       ),
+      // Provide a minimal home widget to satisfy Flutter’s requirement
       home: LoginScreen(),
+    );
+  }
+}
+
+class PlaceholderScreen extends StatelessWidget {
+  const PlaceholderScreen({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: CircularProgressIndicator()),
     );
   }
 }

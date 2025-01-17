@@ -21,10 +21,10 @@ const backgroundColor = Colors.black;
 var buttonColor = Colors.red[400];
 const borderColor = Colors.grey;
 
-// FIREBASE
-var firebaseAuth = FirebaseAuth.instance;
-// REMOVED: var firebaseStorage = FirebaseStorage.instance;
-var firestore = FirebaseFirestore.instance;
-
 // CONTROLLER
 var authController = AuthController.instance;
+
+
+// Firebase instances
+final FirebaseAuth firebaseAuth = FirebaseAuth.instance;
+final FirebaseFirestore firestore = FirebaseFirestore.instance;
