@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
-import 'package:tiktok_tutorial/constants.dart';
+import 'package:tiktok_tutorial/constants.dart';  // Make sure this has your 'firestore' and 'authController'
 import 'package:tiktok_tutorial/models/comment.dart';
 
 class CommentController extends GetxController {
@@ -10,12 +10,12 @@ class CommentController extends GetxController {
 
   String _postId = "";
 
-  updatePostId(String id) {
+  void updatePostId(String id) {
     _postId = id;
     getComment();
   }
 
-  getComment() async {
+  void getComment() async {
     if (_postId.isNotEmpty) {
       _comments.bindStream(
         firestore
@@ -36,51 +36,73 @@ class CommentController extends GetxController {
     }
   }
 
-
-  postComment(String commentText) async {
+  Future<void> postComment(String commentText) async {
     try {
-      if (commentText.isNotEmpty) {
-        if (authController.user != null) { // Null check
-          DocumentSnapshot userDoc = await firestore
-              .collection('users')
-              .doc(authController.user!.uid) // Safe null handling
-              .get();
-
-          var allDocs = await firestore
-              .collection('videos')
-              .doc(_postId)
-              .collection('comments')
-              .get();
-          int len = allDocs.docs.length;
-
-          Comment comment = Comment(
-            username: (userDoc.data()! as dynamic)['name'],
-            comment: commentText.trim(),
-            datePublished: DateTime.now(),
-            likes: [],
-            profilePhoto: (userDoc.data()! as dynamic)['profilePhoto'],
-            uid: authController.user!.uid,
-            id: 'Comment $len',
-          );
-
-          await firestore
-              .collection('videos')
-              .doc(_postId)
-              .collection('comments')
-              .doc('Comment $len')
-              .set(
-            comment.toJson(),
-          );
-
-          DocumentSnapshot doc =
-          await firestore.collection('videos').doc(_postId).get();
-          await firestore.collection('videos').doc(_postId).update({
-            'commentCount': (doc.data()! as dynamic)['commentCount'] + 1,
-          });
-        } else {
-          Get.snackbar('Error', 'User is not logged in');
-        }
+      // 1) Check if comment is empty
+      if (commentText.isEmpty) {
+        Get.snackbar('Error', 'Comment is empty');
+        return;
       }
+      // 2) Check if user is logged in
+      if (authController.user == null) {
+        Get.snackbar('Error', 'User is not logged in');
+        return;
+      }
+
+      // 3) Fetch user document
+      final userDoc = await firestore
+          .collection('users')
+          .doc(authController.user!.uid)
+          .get();
+
+      // If userDoc does not exist or has no data, show error
+      if (!userDoc.exists || userDoc.data() == null) {
+        Get.snackbar('Error', 'User document not found');
+        return;
+      }
+
+      // Safely get user data
+      final userData = userDoc.data() as Map<String, dynamic>;
+
+      // 4) Get comment count (length of docs)
+      final allCommentsSnapshot = await firestore
+          .collection('videos')
+          .doc(_postId)
+          .collection('comments')
+          .get();
+      final int len = allCommentsSnapshot.docs.length;
+
+      // 5) Create the new Comment object
+      final comment = Comment(
+        username: userData['name'] ?? 'Unknown',
+        comment: commentText.trim(),
+        // Store as a Timestamp so .toDate() works in the UI
+        datePublished: Timestamp.now(),
+        likes: [],
+        profilePhoto: userData['profilePhoto'] ?? '',
+        uid: authController.user!.uid,
+        id: 'Comment $len',
+      );
+
+      // 6) Write to Firestore
+      await firestore
+          .collection('videos')
+          .doc(_postId)
+          .collection('comments')
+          .doc('Comment $len')
+          .set(comment.toJson());
+
+      // 7) Update commentCount in the main video document
+      final videoDoc = await firestore.collection('videos').doc(_postId).get();
+
+      if (videoDoc.exists && videoDoc.data() != null) {
+        final videoData = videoDoc.data() as Map<String, dynamic>;
+        final currentCount = videoData['commentCount'] ?? 0;
+        await firestore.collection('videos').doc(_postId).update({
+          'commentCount': currentCount + 1,
+        });
+      }
+
     } catch (e) {
       Get.snackbar(
         'Error While Commenting',
@@ -89,23 +111,39 @@ class CommentController extends GetxController {
     }
   }
 
-  likeComment(String id) async {
-    if (authController.user != null) { // Null check
-      var uid = authController.user!.uid;
+  Future<void> likeComment(String commentId) async {
+    try {
+      // 1) Check if user is logged in
+      if (authController.user == null) {
+        Get.snackbar('Error', 'User is not logged in');
+        return;
+      }
 
-      DocumentSnapshot doc = await firestore
+      final uid = authController.user!.uid;
+
+      // 2) Get the comment document
+      final doc = await firestore
           .collection('videos')
           .doc(_postId)
           .collection('comments')
-          .doc(id)
+          .doc(commentId)
           .get();
 
-      if ((doc.data()! as dynamic)['likes'].contains(uid)) {
+      if (!doc.exists || doc.data() == null) {
+        Get.snackbar('Error', 'Comment not found');
+        return;
+      }
+
+      final docData = doc.data() as Map<String, dynamic>;
+      final likesList = List<String>.from(docData['likes'] ?? []);
+
+      // 3) If user already liked, remove; otherwise add
+      if (likesList.contains(uid)) {
         await firestore
             .collection('videos')
             .doc(_postId)
             .collection('comments')
-            .doc(id)
+            .doc(commentId)
             .update({
           'likes': FieldValue.arrayRemove([uid]),
         });
@@ -114,13 +152,14 @@ class CommentController extends GetxController {
             .collection('videos')
             .doc(_postId)
             .collection('comments')
-            .doc(id)
+            .doc(commentId)
             .update({
           'likes': FieldValue.arrayUnion([uid]),
         });
       }
-    } else {
-      Get.snackbar('Error', 'User is not logged in');
+
+    } catch (e) {
+      Get.snackbar('Error', e.toString());
     }
   }
 }

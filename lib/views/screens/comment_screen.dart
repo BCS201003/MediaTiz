@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tiktok_tutorial/constants.dart';
+import 'package:tiktok_tutorial/constants.dart'; // Must include the authController, etc.
 import 'package:tiktok_tutorial/controllers/comment_controller.dart';
 import 'package:timeago/timeago.dart' as tago;
+import 'package:cloud_firestore/cloud_firestore.dart'; // For Timestamp if needed
 
 class CommentScreen extends StatefulWidget {
   final String id;
@@ -22,7 +23,8 @@ class _CommentScreenState extends State<CommentScreen> {
   @override
   void initState() {
     super.initState();
-    commentController.updatePostId(widget.id); // Update post ID on initialization
+    // Ensure the post ID is set so the controller can load comments.
+    commentController.updatePostId(widget.id);
   }
 
   @override
@@ -40,7 +42,9 @@ class _CommentScreenState extends State<CommentScreen> {
           // Comments List
           Expanded(
             child: Obx(() {
-              if (commentController.comments.isEmpty) {
+              final comments = commentController.comments;
+
+              if (comments.isEmpty) {
                 return const Center(
                   child: Text(
                     'No comments yet',
@@ -48,25 +52,28 @@ class _CommentScreenState extends State<CommentScreen> {
                   ),
                 );
               }
+
               return ListView.builder(
-                itemCount: commentController.comments.length,
+                itemCount: comments.length,
                 itemBuilder: (context, index) {
-                  final comment = commentController.comments[index];
+                  final comment = comments[index];
 
                   return ListTile(
                     leading: CircleAvatar(
                       backgroundColor: Colors.grey,
-                      backgroundImage: comment.profilePhoto != null
+                      backgroundImage: (comment.profilePhoto != null &&
+                          comment.profilePhoto!.isNotEmpty)
                           ? NetworkImage(comment.profilePhoto!)
                           : null,
-                      child: comment.profilePhoto == null
+                      child: (comment.profilePhoto == null ||
+                          comment.profilePhoto!.isEmpty)
                           ? const Icon(Icons.person, color: Colors.white)
                           : null,
                     ),
                     title: Row(
                       children: [
                         Text(
-                          "${comment.username ?? 'Unknown User'}  ",
+                          '${comment.username ?? 'Unknown'}  ',
                           style: const TextStyle(
                             fontSize: 18,
                             color: Colors.red,
@@ -87,8 +94,10 @@ class _CommentScreenState extends State<CommentScreen> {
                     subtitle: Row(
                       children: [
                         Text(
-                          comment.datePublished != null
-                              ? tago.format(comment.datePublished!.toDate())
+                          // comment.datePublished is stored as a Timestamp
+                          (comment.datePublished is Timestamp)
+                              ? tago.format(
+                              (comment.datePublished as Timestamp).toDate())
                               : 'Unknown time',
                           style: const TextStyle(
                             fontSize: 12,
@@ -111,9 +120,11 @@ class _CommentScreenState extends State<CommentScreen> {
                       child: Icon(
                         Icons.favorite,
                         size: 25,
-                        color: comment.likes != null &&
+                        color: (comment.likes != null &&
+                            authController.user != null &&
                             comment.likes!.contains(
-                                authController.user?.uid ?? '')
+                              authController.user!.uid,
+                            ))
                             ? Colors.red
                             : Colors.white,
                       ),
@@ -148,9 +159,10 @@ class _CommentScreenState extends State<CommentScreen> {
             ),
             trailing: TextButton(
               onPressed: () {
-                if (_commentController.text.trim().isNotEmpty) {
-                  commentController.postComment(_commentController.text.trim());
-                  _commentController.clear(); // Clear input field after posting
+                final text = _commentController.text.trim();
+                if (text.isNotEmpty) {
+                  commentController.postComment(text);
+                  _commentController.clear();
                 } else {
                   Get.snackbar(
                     'Error',

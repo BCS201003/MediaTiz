@@ -9,5 +9,5 @@ git branch -m master main
 git remote add origin <repository URL>
 git pull --rebase origin main
 git add .
-git commit -m "Commit"
+git commit -m "Resolving comment bug"
 git push origin main
