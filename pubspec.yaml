@@ -1,0 +1,36 @@
+name: tiktok_tutorial
+description: A new Flutter project.
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=2.15.1 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Updated versions (verify on pub.dev or with `flutter pub outdated`)
+  cached_network_image: ^3.2.3
+  cloud_firestore: ^4.7.1
+  cupertino_icons: ^1.0.5
+  firebase_auth: ^4.7.1
+  firebase_core: ^2.14.0
+  #firebase_storage: ^11.0.19
+  get: ^4.6.5
+  image_picker: ^1.0.1
+  timeago: ^3.3.0
+  video_compress: ^3.1.1
+  video_player: ^2.5.5
+  connectivity_plus: ^6.1.2
+
+
+dev_dependencies:
+  flutter_lints: ^2.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+assets:
+  - assets/videos/
